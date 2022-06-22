@@ -1,3 +1,5 @@
+<img src="./parti.jpeg" width="450px"></img>
+
 ## Parti - Pytorch (wip)
 
 Implementation of <a href="https://parti.research.google/">Parti</a>, Google's pure attention-based text-to-image neural network, in Pytorch
