@@ -205,7 +205,7 @@ class Parti(nn.Module):
         image_size = default(vae_image_size, vae.image_size)
 
         self.start_token = nn.Parameter(torch.randn(dim))
-        self.image_token_embed = nn.Embedding(codebook_size, dim)  # + 1 for start token (or padding)
+        self.image_token_embed = nn.Embedding(codebook_size, dim)
 
         self.image_encoded_dim = vae.get_encoded_fmap_size(image_size)
 
