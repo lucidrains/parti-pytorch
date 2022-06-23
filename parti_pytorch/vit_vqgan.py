@@ -469,19 +469,18 @@ class VitVQGanVAE(nn.Module):
     def codebook(self):
         return self.vq.codebook
 
-    def encode(self, fmap):
+    def encode(self, fmap, return_indices_and_loss = True):
         fmap = self.enc_dec.encode(fmap)
-        return fmap
 
-    def decode(self, fmap, return_indices_and_loss = False):
         fmap, indices, commit_loss = self.vq(fmap)
-
-        fmap = self.enc_dec.decode(fmap)
 
         if not return_indices_and_loss:
             return fmap
 
         return fmap, indices, commit_loss
+
+    def decode(self, fmap):
+        return self.enc_dec.decode(fmap)
 
     def forward(
         self,
@@ -495,9 +494,9 @@ class VitVQGanVAE(nn.Module):
         assert height == self.image_size and width == self.image_size, 'height and width of input image must be equal to {self.image_size}'
         assert channels == self.channels, 'number of channels on image or sketch is not equal to the channels set on this VQGanVAE'
 
-        fmap = self.encode(img)
+        fmap, indices, commit_loss = self.encode(img, return_indices_and_loss = True)
 
-        fmap, indices, commit_loss = self.decode(fmap, return_indices_and_loss = True)
+        fmap = self.decode(fmap)
 
         if not return_loss and not return_discr_loss:
             return fmap

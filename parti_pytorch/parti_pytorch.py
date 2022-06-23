@@ -7,7 +7,6 @@ from einops.layers.torch import Rearrange
 
 # helper functions
 
-
 def exists(val):
     return val is not None
 
@@ -25,8 +24,19 @@ class LayerNorm(nn.Module):
     def forward(self, x):
         return F.layer_norm(x, x.shape[-1:], self.gamma, self.beta)
 
-# attention
+# feedforward
 
+def FeedForward(dim, mult = 4, dropout = 0.):
+    dim_hidden = int(dim * mult)
+    return nn.Sequential(
+        LayerNorm(dim),
+        nn.Linear(dim, dim_hidden, bias = False),
+        nn.GELU(),
+        LayerNorm(dim_hidden),
+        nn.Linear(dim_hidden, dim, bias = False)
+    )
+
+# attention
 
 class Attention(nn.Module):
     def __init__(
@@ -111,7 +121,6 @@ class Attention(nn.Module):
         out = einsum('b h i j, b j d -> b h i d', attn, kv)
 
         return self.to_out(out)
-
 
 # classes
 
