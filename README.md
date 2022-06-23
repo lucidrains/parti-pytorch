@@ -4,6 +4,8 @@
 
 Implementation of <a href="https://parti.research.google/">Parti</a>, Google's pure attention-based text-to-image neural network, in Pytorch
 
+<a href="https://www.youtube.com/watch?v=qS-iYnp00uc">Yannic Kilcher</a>
+
 ## Install
 
 ```bash
