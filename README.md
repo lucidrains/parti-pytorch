@@ -6,6 +6,8 @@ Implementation of <a href="https://parti.research.google/">Parti</a>, Google's p
 
 <a href="https://www.youtube.com/watch?v=qS-iYnp00uc">Yannic Kilcher</a>
 
+Please join <a href="https://discord.gg/xBPBXfcFHd"><img alt="Join us on Discord" src="https://img.shields.io/discord/823813159592001537?color=5865F2&logo=discord&logoColor=white"></a> if you are interested in helping out with the replication with the <a href="https://laion.ai/">LAION</a> community
+
 ## Install
 
 ```bash
