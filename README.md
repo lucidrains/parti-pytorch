@@ -90,6 +90,7 @@ images = parti.generate(texts = [
 - [ ] preencoding of text with designated t5
 - [ ] training code for parti
 - [ ] inference caching
+- [ ] automatic filtering with Coca https://github.com/lucidrains/CoCa-pytorch
 
 ## Citations
 
