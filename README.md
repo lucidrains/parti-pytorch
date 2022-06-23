@@ -41,6 +41,7 @@ parti = Parti(
     dim_head = 64,            # attention head dimension
     heads = 8,                # attention heads
     dropout = 0.,             # dropout
+    cond_drop_prob = 0.25,    # conditional dropout, for classifier free guidance
     ff_mult = 4,              # feedforward expansion factor
     t5_name = 't5-large',     # name of your T5
 )
@@ -73,9 +74,9 @@ images = parti.generate(texts = [
     'a whale breaching from afar',
     'young girl blowing out candles on her birthday cake',
     'fireworks with blue and green sparkles'
-], cond_scale = 3.)
+], cond_scale = 3., return_pil_images = True) # conditioning scale for classifier free guidance
 
-# (3, 3, 256, 256) <-- save your images
+# List[PILImages] (256 x 256 RGB)
 ```
 
 ## Appreciation
