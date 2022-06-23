@@ -13,3 +13,13 @@ Implementation of <a href="https://parti.research.google/">Parti</a>, Google's p
     year    = {2022}
 }
 ```
+
+```bibtex
+@article{Sankararaman2022BayesFormerTW,
+    title   = {BayesFormer: Transformer with Uncertainty Estimation},
+    author  = {Karthik Abinav Sankararaman and Sinong Wang and Han Fang},
+    journal = {ArXiv},
+    year    = {2022},
+    volume  = {abs/2206.00826}
+}
+```

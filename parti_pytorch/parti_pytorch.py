@@ -25,7 +25,8 @@ class Attention(nn.Module):
         context_dim = None,
         dim_head = 64,
         heads = 8,
-        causal = False
+        causal = False,
+        dropout = 0.
     ):
         super().__init__()
         self.causal = causal
@@ -34,6 +35,7 @@ class Attention(nn.Module):
         context_dim = default(context_dim, dim)
 
         self.to_q = nn.Sequential(
+            nn.Dropout(dropout),
             nn.Linear(dim, inner_dim, bias = False),
             Rearrange('b n (h d) -> b h n d', h = heads)
         )
@@ -45,7 +47,10 @@ class Attention(nn.Module):
 
         # one-headed key / value attention, from Shazeer's multi-query paper, adopted by Alphacode and PaLM
 
-        self.to_kv = nn.Linear(context_dim, dim_head, bias = False)
+        self.to_kv = nn.Sequential(
+            nn.Dropout(dropout),
+            nn.Linear(context_dim, dim_head, bias = False)
+        )
 
         self.to_out = nn.Sequential(
             Rearrange('b h n d -> b n (h d)'),
