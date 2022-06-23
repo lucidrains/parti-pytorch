@@ -84,6 +84,12 @@ images = parti.generate(texts = [
 
 - <a href="https://huggingface.co/">🤗 Huggingface</a> for the transformers library and the ease for encoding text with T5 language model
 
+## Todo
+
+- [ ] get working vit vqgan-vae trainer code, as discriminator needs to be trained
+- [ ] preencoding of text with designated t5
+- [ ] training code for parti
+- [ ] inference caching
 
 ## Citations
 
