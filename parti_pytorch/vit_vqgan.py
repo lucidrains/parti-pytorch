@@ -370,12 +370,11 @@ class VitVQGanVAE(nn.Module):
         l2_recon_loss = False,
         use_hinge_loss = True,
         vgg = None,
-        vq_codebook_dim = 256,
+        vq_codebook_dim = 64,
         vq_codebook_size = 512,
-        vq_decay = 0.8,
+        vq_decay = 0.9,
         vq_commitment_weight = 1.,
         vq_kmeans_init = True,
-        vq_use_cosine_sim = True,
         use_vgg_and_gan = True,
         discr_layers = 4,
         **kwargs
@@ -401,9 +400,9 @@ class VitVQGanVAE(nn.Module):
             codebook_size = vq_codebook_size,
             decay = vq_decay,
             commitment_weight = vq_commitment_weight,
-            accept_image_fmap = True,
             kmeans_init = vq_kmeans_init,
-            use_cosine_sim = vq_use_cosine_sim,
+            accept_image_fmap = True,
+            use_cosine_sim = True,
             **vq_kwargs
         )
 
