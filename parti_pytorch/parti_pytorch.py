@@ -14,6 +14,17 @@ def exists(val):
 def default(val, d):
     return val if exists(val) else d
 
+# normalization
+
+class LayerNorm(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.gamma = nn.Parameter(torch.ones(dim))
+        self.register_buffer('beta', torch.zeros(dim))
+
+    def forward(self, x):
+        return F.layer_norm(x, x.shape[-1:], self.gamma, self.beta)
+
 # attention
 
 
@@ -26,13 +37,17 @@ class Attention(nn.Module):
         dim_head = 64,
         heads = 8,
         causal = False,
-        dropout = 0.
+        dropout = 0.,
+        norm_context = False
     ):
         super().__init__()
         self.causal = causal
         self.scale = dim_head ** -0.5
+        self.norm = LayerNorm(dim)
+
         inner_dim = heads * dim_head
         context_dim = default(context_dim, dim)
+        self.norm_context = LayerNorm(context_dim) if norm_context else nn.Identity()
 
         self.to_q = nn.Sequential(
             nn.Dropout(dropout),
@@ -54,7 +69,8 @@ class Attention(nn.Module):
 
         self.to_out = nn.Sequential(
             Rearrange('b h n d -> b n (h d)'),
-            nn.Linear(inner_dim, dim, bias = False)
+            nn.Linear(inner_dim, dim, bias = False),
+            LayerNorm(dim)
         )
 
     def forward(
@@ -65,10 +81,14 @@ class Attention(nn.Module):
     ):
         batch, device = x.shape[0], x.device
 
+        x = self.norm(x)
+
         q = self.to_q(x) * self.scale
 
-        kv_input = default(context, x)
-        kv = self.to_kv(kv_input)
+        context = default(context, x)
+        context = self.norm_context(context)
+
+        kv = self.to_kv(context)
 
         null_kv = repeat(self.null_kv, 'd -> b 1 d', b = batch)
         kv = torch.cat((null_kv, kv), dim = 1)

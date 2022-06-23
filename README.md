@@ -15,6 +15,16 @@ Implementation of <a href="https://parti.research.google/">Parti</a>, Google's p
 ```
 
 ```bibtex
+@article{Shleifer2021NormFormerIT,
+    title   = {NormFormer: Improved Transformer Pretraining with Extra Normalization},
+    author  = {Sam Shleifer and Jason Weston and Myle Ott},
+    journal = {ArXiv},
+    year    = {2021},
+    volume  = {abs/2110.09456}
+}
+```
+
+```bibtex
 @article{Sankararaman2022BayesFormerTW,
     title   = {BayesFormer: Transformer with Uncertainty Estimation},
     author  = {Karthik Abinav Sankararaman and Sinong Wang and Han Fang},
