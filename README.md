@@ -91,6 +91,7 @@ images = parti.generate(texts = [
 - [ ] training code for parti
 - [ ] inference caching
 - [ ] automatic filtering with Coca https://github.com/lucidrains/CoCa-pytorch
+- [ ] bring in the super-resoluting convolutional net mentioned in the paper, with training code
 
 ## Citations
 
