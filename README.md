@@ -97,6 +97,7 @@ images = parti.generate(texts = [
 - [ ] inference caching
 - [ ] automatic filtering with Coca https://github.com/lucidrains/CoCa-pytorch
 - [ ] bring in the super-resoluting convolutional net mentioned in the paper, with training code
+- [ ] add 2d relative positional bias to parti autoregressive transformer
 
 ## Citations
 
