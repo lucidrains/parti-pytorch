@@ -203,9 +203,14 @@ class Parti(nn.Module):
 
         codebook_size = default(vae_codebook_size, vae.codebook_size)
         image_size = default(vae_image_size, vae.image_size)
-        self.image_token_embed = nn.Embedding(codebook_size + 1, dim)  # + 1 for start token (or padding)
+
+        self.start_token = nn.Parameter(torch.randn(dim))
+        self.image_token_embed = nn.Embedding(codebook_size, dim)  # + 1 for start token (or padding)
 
         self.image_encoded_dim = vae.get_encoded_fmap_size(image_size)
+
+        self.axial_height_pos = nn.Parameter(torch.randn(self.image_encoded_dim, dim))
+        self.axial_width_pos = nn.Parameter(torch.randn(self.image_encoded_dim, dim))
 
         # projecting to logits
 
@@ -264,9 +269,6 @@ class Parti(nn.Module):
             sampled = gumbel_sample(filtered_logits, temperature = temperature, dim = -1)
 
             sampled = rearrange(sampled, 'b -> b 1')
-
-            sampled = sampled - 1
-            sampled = sampled.masked_fill(sampled == -1, 0)
             image_tokens = torch.cat((image_tokens, sampled), dim = -1)
 
         image_tokens = image_tokens[:, 1:] # remove start token
@@ -319,18 +321,25 @@ class Parti(nn.Module):
 
             image_token_ids = rearrange(image_token_ids, 'b ... -> b (...)')
 
-        if exists(image_token_ids):
-            image_token_ids = image_token_ids + 1
-
-        image_token_ids = F.pad(image_token_ids, (1, 0), value = 0) # add start token [0]
-
         if return_loss:
             assert image_token_ids.shape[-1] > 1, 'not enough image tokens given to return a loss'
-            image_token_ids, labels = image_token_ids[:, :-1], image_token_ids[:, 1:]
+            image_token_ids, labels = image_token_ids[:, :-1], image_token_ids
 
         image_token_emb = self.image_token_embed(image_token_ids)
 
-        batch, device = image_token_emb.shape[0], image_token_emb.device
+        # add axial positional embedding
+
+        axial_pos_emb = rearrange(self.axial_width_pos, 'w d -> 1 w d') + rearrange(self.axial_height_pos, 'h d -> h 1 d')
+        axial_pos_emb = rearrange(axial_pos_emb, 'h w d -> (h w) d')
+
+        batch, seq_len, device = *image_token_emb.shape[:2], image_token_emb.device
+
+        image_token_emb = image_token_emb + axial_pos_emb[:seq_len]
+
+        # add start token
+
+        start_tokens = repeat(self.start_token, 'd -> b 1 d', b = batch)
+        image_token_emb = torch.cat((start_tokens, image_token_emb), dim = 1)
 
         # text
 
