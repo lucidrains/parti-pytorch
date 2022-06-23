@@ -19,7 +19,11 @@ setup(
   ],
   install_requires=[
     'einops>=0.4',
+    'einops-exts',
+    'ema-pytorch',
     'torch>=1.6',
+    'torchvision',
+    'vector-quantize-pytorch'
   ],
   classifiers=[
     'Development Status :: 4 - Beta',
