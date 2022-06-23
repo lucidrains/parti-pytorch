@@ -23,6 +23,7 @@ setup(
     'ema-pytorch',
     'torch>=1.6',
     'torchvision',
+    'transformers',
     'vector-quantize-pytorch'
   ],
   classifiers=[

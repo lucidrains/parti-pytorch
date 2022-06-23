@@ -468,6 +468,11 @@ class VitVQGanVAE(nn.Module):
     def codebook(self):
         return self.vq.codebook
 
+    def get_fmap_from_codebook(self, indices):
+        codes = self.codebook[indices]
+        fmap = self.vq.project_out(codes)
+        return rearrange(fmap, 'b h w c -> b c h w')
+
     def encode(self, fmap, return_indices_and_loss = True):
         fmap = self.enc_dec.encode(fmap)
 
