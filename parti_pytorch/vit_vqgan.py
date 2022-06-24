@@ -99,11 +99,6 @@ def l2norm(t):
 def leaky_relu(p = 0.1):
     return nn.LeakyReLU(0.1)
 
-def stable_softmax(t, dim = -1, alpha = 32 ** 2):
-    t = t / alpha
-    t = t - torch.amax(t, dim = dim, keepdim = True).detach()
-    return (t * alpha).softmax(dim = dim)
-
 def safe_div(numer, denom, eps = 1e-8):
     return numer / (denom + eps)
 
@@ -492,7 +487,7 @@ class VitVQGanVAE(nn.Module):
         return_loss = False,
         return_discr_loss = False,
         return_recons = False,
-        add_gradient_penalty = True
+        apply_grad_penalty = True
     ):
         batch, channels, height, width, device = *img.shape, img.device
         assert height == self.image_size and width == self.image_size, 'height and width of input image must be equal to {self.image_size}'
@@ -519,7 +514,7 @@ class VitVQGanVAE(nn.Module):
 
             discr_loss = self.discr_loss(fmap_discr_logits, img_discr_logits)
 
-            if add_gradient_penalty:
+            if apply_grad_penalty:
                 gp = gradient_penalty(img, img_discr_logits)
                 loss = discr_loss + gp
 

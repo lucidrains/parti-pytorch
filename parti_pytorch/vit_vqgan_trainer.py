@@ -16,7 +16,7 @@ from torchvision.utils import make_grid, save_image
 
 from einops import rearrange
 
-from parti_pytorch.vit_vqgan import VQGanVAE
+from parti_pytorch.vit_vqgan import VitVQGanVAE
 from parti_pytorch.optimizer import get_optimizer
 
 from ema_pytorch import EMA
@@ -87,10 +87,10 @@ class VQGanVAETrainer(nn.Module):
         vae,
         *,
         num_train_steps,
-        lr,
         batch_size,
         folder,
-        grad_accum_every,
+        lr = 3e-4,
+        grad_accum_every = 1,
         wd = 0.,
         save_results_every = 100,
         save_model_every = 1000,
@@ -104,7 +104,7 @@ class VQGanVAETrainer(nn.Module):
         amp = False
     ):
         super().__init__()
-        assert isinstance(vae, VQGanVAE), 'vae must be instance of VQGanVAE'
+        assert isinstance(vae, VitVQGanVAE), 'vae must be instance of VitVQGanVAE'
         image_size = vae.image_size
 
         self.vae = vae
@@ -191,7 +191,6 @@ class VQGanVAETrainer(nn.Module):
                     return_loss = True,
                     apply_grad_penalty = apply_grad_penalty
                 )
-
 
                 self.scaler.scale(loss / self.grad_accum_every).backward()
 
