@@ -212,6 +212,8 @@ class PEG(nn.Module):
         return self.proj(x)
 
 class SPT(nn.Module):
+    """ https://arxiv.org/abs/2112.13492 """
+
     def __init__(self, *, dim, patch_size, channels = 3):
         super().__init__()
         patch_dim = patch_size * patch_size * 5 * channels

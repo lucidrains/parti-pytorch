@@ -143,14 +143,14 @@ loss.backward()
 ## Todo
 
 - [x] add 2d relative positional bias to parti autoregressive transformer
-- [ ] get working vit vqgan-vae trainer code, as discriminator needs to be trained
+- [x] cite all techniques adopted from vision transformer literature in vit vqgan if they work
+- [x] get working vit vqgan-vae trainer code, as discriminator needs to be trained
 - [ ] preencoding of text with designated t5
 - [ ] training code for parti
 - [ ] inference caching
 - [ ] automatic filtering with Coca https://github.com/lucidrains/CoCa-pytorch
 - [ ] bring in the super-resoluting convolutional net mentioned in the paper, with training code
 - [ ] initialize 2d rel pos bias in conv-like pattern
-- [ ] cite all techniques adopted from vision transformer literature in vit vqgan if they work
 
 ## Citations
 
@@ -179,5 +179,35 @@ loss.backward()
     journal = {ArXiv},
     year    = {2022},
     volume  = {abs/2206.00826}
+}
+```
+
+```bibtex
+@article{Lee2021VisionTF,
+    title   = {Vision Transformer for Small-Size Datasets},
+    author  = {Seung Hoon Lee and Seunghyun Lee and Byung Cheol Song},
+    journal = {ArXiv},
+    year    = {2021},
+    volume  = {abs/2112.13492}
+}
+```
+
+```bibtex
+@article{Chu2021DoWR,
+    title   = {Do We Really Need Explicit Position Encodings for Vision Transformers?},
+    author  = {Xiangxiang Chu and Bo Zhang and Zhi Tian and Xiaolin Wei and Huaxia Xia},
+    journal {ArXiv},
+    year    = {2021},
+    volume  = {abs/2102.10882}
+}
+```
+
+```bibtex
+@article{So2021PrimerSF,
+    title   = {Primer: Searching for Efficient Transformers for Language Modeling},
+    author  = {David R. So and Wojciech Ma'nke and Hanxiao Liu and Zihang Dai and Noam M. Shazeer and Quoc V. Le},
+    journal = {ArXiv},
+    year    = {2021},
+    volume  = {abs/2109.08668}
 }
 ```
