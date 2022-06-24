@@ -245,6 +245,8 @@ class Attention(nn.Module):
         inner_dim = dim_head * heads
 
         self.to_qkv = nn.Conv2d(dim, inner_dim * 3, 1, bias = False)
+        self.primer_ds_convs = nn.ModuleList([PEG(inner_dim) for _ in range(3)])
+
         self.to_out = nn.Conv2d(inner_dim, dim, 1, bias = False)
 
         self.rel_pos_bias = None
@@ -259,6 +261,8 @@ class Attention(nn.Module):
         x = self.norm(x)
 
         q, k, v = self.to_qkv(x).chunk(3, dim = 1)
+
+        q, k, v = [ds_conv(t) for ds_conv, t in zip(self.primer_ds_convs, (q, k, v))]
         q, k, v = rearrange_many((q, k, v), 'b (h d) x y -> b h (x y) d', h = h)
 
         q = q * self.scale
