@@ -301,7 +301,7 @@ class Parti(nn.Module):
 
         image_tokens = torch.empty((batch, 0), device = device, dtype = torch.long)
 
-        for _ in range(image_seq_len + 1):
+        for _ in range(image_seq_len):
             logits = self.forward_with_cond_scale(
                 text_token_embeds = text_token_embeds,
                 text_mask = text_mask,
@@ -313,8 +313,6 @@ class Parti(nn.Module):
 
             sampled = rearrange(sampled, 'b -> b 1')
             image_tokens = torch.cat((image_tokens, sampled), dim = -1)
-
-        image_tokens = image_tokens[:, 1:] # remove start token
 
         image_tokens = rearrange(image_tokens, 'b (h w) -> b h w', h = self.image_encoded_dim)
 
