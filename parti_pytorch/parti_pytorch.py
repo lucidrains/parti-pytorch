@@ -291,9 +291,7 @@ class Parti(nn.Module):
     ):
         device = next(self.parameters()).device
 
-        text_token_embeds, text_mask = self.encode_texts(texts)
-        text_token_embeds.to(device)
-        text_mask.to(device)
+        text_token_embeds, text_mask = self.encode_texts(texts, output_device = device)
 
         batch = text_token_embeds.shape[0]
 
@@ -386,13 +384,10 @@ class Parti(nn.Module):
 
         if not exists(text_token_embeds):
             with torch.no_grad():
-                text_token_embeds, text_mask = self.encode_texts(texts)
+                text_token_embeds, text_mask = self.encode_texts(texts, output_device = device)
 
         if not exists(text_mask):
             text_mask = torch.ones(text_token_embeds.shape[:2], dtype = torch.bool)
-
-        text_token_embeds.to(device)
-        text_mask.to(device)
 
         # enforce max text len
 

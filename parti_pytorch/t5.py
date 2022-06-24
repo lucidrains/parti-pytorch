@@ -52,7 +52,7 @@ def get_encoded_dim(name):
 
 # encoding text
 
-def t5_encode_text(texts, name = DEFAULT_T5_NAME):
+def t5_encode_text(texts, name = DEFAULT_T5_NAME, output_device = None):
     t5, tokenizer = get_model_and_tokenizer(name)
 
     if torch.cuda.is_available():
@@ -77,4 +77,12 @@ def t5_encode_text(texts, name = DEFAULT_T5_NAME):
         output = t5(input_ids = input_ids, attention_mask = attn_mask)
         encoded_text = output.last_hidden_state.detach()
 
-    return encoded_text, attn_mask.bool()
+    attn_mask = attn_mask.bool()
+
+    if not exists(output_device):
+        return encoded_text, attn_mask
+
+    encoded_text.to(output_device)
+    attn_mask.to(output_device)
+
+    return encoded_text, attn_mask
