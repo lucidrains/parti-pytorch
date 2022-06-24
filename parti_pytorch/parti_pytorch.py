@@ -225,7 +225,8 @@ class Parti(nn.Module):
         vae_codebook_size = None,
         t5_name = DEFAULT_T5_NAME,
         text_embed_dim = None,
-        cond_drop_prob = 0.25
+        cond_drop_prob = 0.25,
+        max_text_len = 128
     ):
         super().__init__()
 
@@ -233,6 +234,7 @@ class Parti(nn.Module):
 
         text_embed_dim = default(text_embed_dim, get_encoded_dim(t5_name))
         self.encode_texts = partial(t5_encode_text, name = t5_name)
+        self.max_text_len = max_text_len
 
         assert cond_drop_prob > 0.
         self.cond_drop_prob = cond_drop_prob # classifier free guidance for transformers - @crowsonkb
@@ -393,6 +395,10 @@ class Parti(nn.Module):
 
         text_token_embeds.to(device)
         text_mask.to(device)
+
+        # enforce max text len
+
+        text_token_embeds, text_mask = map(lambda t: t[:, :self.max_text_len], (text_token_embeds, text_mask))
 
         # classifier free guidance conditional dropout
 
