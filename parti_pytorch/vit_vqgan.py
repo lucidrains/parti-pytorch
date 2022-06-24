@@ -126,7 +126,7 @@ def grad_layer_wrt_loss(loss, layer):
 
 # vqgan vae
 
-class LayerNormChan(nn.Module):
+class ChanLayerNorm(nn.Module):
     def __init__(
         self,
         dim,
@@ -139,7 +139,7 @@ class LayerNormChan(nn.Module):
     def forward(self, x):
         var = torch.var(x, dim = 1, unbiased = False, keepdim = True)
         mean = torch.mean(x, dim = 1, keepdim = True)
-        return (x - mean) / (var + self.eps).sqrt() * self.gamma
+        return (x - mean) * (var + self.eps).rsqrt() * self.gamma
 
 # discriminator
 
@@ -176,49 +176,57 @@ class Discriminator(nn.Module):
 
         return self.to_logits(x)
 
-# positional encoding
+# 2d relative positional bias
 
-class ContinuousPositionBias(nn.Module):
-    """ from https://arxiv.org/abs/2111.09883 """
-
-    def __init__(self, *, dim, heads, layers = 2):
+class RelPosBias2d(nn.Module):
+    def __init__(self, size, heads):
         super().__init__()
-        self.net = MList([])
-        self.net.append(nn.Sequential(nn.Linear(2, dim), leaky_relu()))
+        self.pos_bias = nn.Embedding((2 * size - 1) ** 2, heads)
 
-        for _ in range(layers - 1):
-            self.net.append(nn.Sequential(nn.Linear(dim, dim), leaky_relu()))
+        arange = torch.arange(size)
 
-        self.net.append(nn.Linear(dim, heads))
-        self.register_buffer('rel_pos', None, persistent = False)
+        pos = torch.stack(torch.meshgrid(arange, arange, indexing = 'ij'), dim = -1)
+        pos = rearrange(pos, '... c -> (...) c')
+        rel_pos = rearrange(pos, 'i c -> i 1 c') - rearrange(pos, 'j c -> 1 j c')
 
-    def forward(self, x):
-        n, device = x.shape[-1], x.device
-        fmap_size = int(sqrt(n))
+        rel_pos = rel_pos + size - 1
+        h_rel, w_rel = rel_pos.unbind(dim = -1)
+        pos_indices = h_rel * (2 * size - 1) + w_rel
+        self.register_buffer('pos_indices', pos_indices)
 
-        if not exists(self.rel_pos):
-            pos = torch.arange(fmap_size, device = device)
-            grid = torch.stack(torch.meshgrid(pos, pos, indexing = 'ij'))
-            grid = rearrange(grid, 'c i j -> (i j) c')
-            rel_pos = rearrange(grid, 'i c -> i 1 c') - rearrange(grid, 'j c -> 1 j c')
-            rel_pos = torch.sign(rel_pos) * torch.log(rel_pos.abs() + 1)
-            self.register_buffer('rel_pos', rel_pos, persistent = False)
+    def forward(self, qk):
+        i, j = qk.shape[-2:]
 
-        rel_pos = self.rel_pos.float()
-
-        for layer in self.net:
-            rel_pos = layer(rel_pos)
-
-        bias = rearrange(rel_pos, 'i j h -> h i j')
-        return x + bias
+        bias = self.pos_bias(self.pos_indices)
+        bias = rearrange(bias, 'i j h -> h i j')
+        return bias
 
 # ViT encoder / decoder
 
-class RearrangeImage(nn.Module):
+class PEG(nn.Module):
+    def __init__(self, dim, kernel_size = 3):
+        super().__init__()
+        self.proj = nn.Conv2d(dim, dim, kernel_size = kernel_size, padding = kernel_size // 2, groups = dim, stride = 1)
+
     def forward(self, x):
-        n = x.shape[1]
-        w = h = int(sqrt(n))
-        return rearrange(x, 'b (h w) ... -> b h w ...', h = h, w = w)
+        return self.proj(x)
+
+class SPT(nn.Module):
+    def __init__(self, *, dim, patch_size, channels = 3):
+        super().__init__()
+        patch_dim = patch_size * patch_size * 5 * channels
+
+        self.to_patch_tokens = nn.Sequential(
+            Rearrange('b c (h p1) (w p2) -> b (p1 p2 c) h w', p1 = patch_size, p2 = patch_size),
+            ChanLayerNorm(patch_dim),
+            nn.Conv2d(patch_dim, dim, 1)
+        )
+
+    def forward(self, x):
+        shifts = ((1, -1, 0, 0), (-1, 1, 0, 0), (0, 0, 1, -1), (0, 0, -1, 1))
+        shifted_x = list(map(lambda shift: F.pad(x, shift), shifts))
+        x_with_shifts = torch.cat((x, *shifted_x), dim = 1)
+        return self.to_patch_tokens(x_with_shifts)
 
 class Attention(nn.Module):
     def __init__(
@@ -226,41 +234,53 @@ class Attention(nn.Module):
         dim,
         *,
         heads = 8,
-        dim_head = 32
+        dim_head = 32,
+        fmap_size = None,
+        rel_pos_bias = False
     ):
         super().__init__()
-        self.norm = nn.LayerNorm(dim)
+        self.norm = ChanLayerNorm(dim)
         self.heads = heads
         self.scale = dim_head ** -0.5
         inner_dim = dim_head * heads
 
-        self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
-        self.to_out = nn.Linear(inner_dim, dim)
+        self.to_qkv = nn.Conv2d(dim, inner_dim * 3, 1, bias = False)
+        self.to_out = nn.Conv2d(inner_dim, dim, 1, bias = False)
+
+        self.rel_pos_bias = None
+        if rel_pos_bias:
+            assert exists(fmap_size)
+            self.rel_pos_bias = RelPosBias2d(fmap_size, heads)
 
     def forward(self, x):
+        fmap_size = x.shape[-1]
         h = self.heads
 
         x = self.norm(x)
 
-        q, k, v = self.to_qkv(x).chunk(3, dim = -1)
-        q, k, v = rearrange_many((q, k, v), 'b n (h d) -> b h n d', h = h)
+        q, k, v = self.to_qkv(x).chunk(3, dim = 1)
+        q, k, v = rearrange_many((q, k, v), 'b (h d) x y -> b h (x y) d', h = h)
 
         q = q * self.scale
         sim = einsum('b h i d, b h j d -> b h i j', q, k)
+
+        if exists(self.rel_pos_bias):
+            sim = sim + self.rel_pos_bias(sim)
 
         attn = sim.softmax(dim = -1, dtype = torch.float32)
 
         out = einsum('b h i j, b h j d -> b h i d', attn, v)
 
-        out = rearrange(out, 'b h n d -> b n (h d)')
+        out = rearrange(out, 'b h (x y) d -> b (h d) x y', x = fmap_size, y = fmap_size)
         return self.to_out(out)
 
 def FeedForward(dim, mult = 4):
     return nn.Sequential(
-        nn.LayerNorm(dim),
-        nn.Linear(dim, dim * mult, bias = False),
+        ChanLayerNorm(dim),
+        nn.Conv2d(dim, dim * mult, 1, bias = False),
         nn.GELU(),
-        nn.Linear(dim * mult, dim, bias = False)
+        PEG(dim * mult),
+        nn.Conv2d(dim * mult, dim, 1, bias = False)
     )
 
 class Transformer(nn.Module):
@@ -271,20 +291,23 @@ class Transformer(nn.Module):
         layers,
         dim_head = 32,
         heads = 8,
-        ff_mult = 4
+        ff_mult = 4,
+        fmap_size = None
     ):
         super().__init__()
         self.layers = nn.ModuleList([])
         for _ in range(layers):
             self.layers.append(nn.ModuleList([
-                Attention(dim = dim, dim_head = dim_head, heads = heads),
+                PEG(dim = dim),
+                Attention(dim = dim, dim_head = dim_head, heads = heads, fmap_size = fmap_size, rel_pos_bias = True),
                 FeedForward(dim = dim, mult = ff_mult)
             ]))
 
-        self.norm = nn.LayerNorm(dim)
+        self.norm = ChanLayerNorm(dim)
 
     def forward(self, x):
-        for attn, ff in self.layers:
+        for peg, attn, ff in self.layers:
+            x = peg(x) + x
             x = attn(x) + x
             x = ff(x) + x
 
@@ -294,9 +317,10 @@ class ViTEncDec(nn.Module):
     def __init__(
         self,
         dim,
+        image_size,
         channels = 3,
         layers = 4,
-        patch_size = 8,
+        patch_size = 16,
         dim_head = 32,
         heads = 8,
         ff_mult = 4
@@ -306,37 +330,35 @@ class ViTEncDec(nn.Module):
         self.patch_size = patch_size
 
         input_dim = channels * (patch_size ** 2)
+        fmap_size = image_size // patch_size
 
         self.encoder = nn.Sequential(
-            Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1 = patch_size, p2 = patch_size),
-            nn.Linear(input_dim, dim),
+            SPT(dim = dim, patch_size = patch_size, channels = channels),
             Transformer(
                 dim = dim,
                 dim_head = dim_head,
                 heads = heads,
                 ff_mult = ff_mult,
-                layers = layers
+                layers = layers,
+                fmap_size = fmap_size
             ),
-            RearrangeImage(),
-            Rearrange('b h w c -> b c h w')
         )
 
         self.decoder = nn.Sequential(
-            Rearrange('b c h w -> b (h w) c'),
             Transformer(
                 dim = dim,
                 dim_head = dim_head,
                 heads = heads,
                 ff_mult = ff_mult,
-                layers = layers
+                layers = layers,
+                fmap_size = fmap_size
             ),
             nn.Sequential(
-                nn.Linear(dim, dim * 4, bias = False),
+                nn.Conv2d(dim, dim * 4, 3, bias = False, padding = 1),
                 nn.Tanh(),
-                nn.Linear(dim * 4, input_dim, bias = False),
+                nn.Conv2d(dim * 4, input_dim, 1, bias = False),
             ),
-            RearrangeImage(),
-            Rearrange('b h w (p1 p2 c) -> b c (h p1) (w p2)', p1 = patch_size, p2 = patch_size)
+            Rearrange('b (p1 p2 c) h w -> b c (h p1) (w p2)', p1 = patch_size, p2 = patch_size)
         )
 
     def get_encoded_fmap_size(self, image_size):
@@ -344,7 +366,7 @@ class ViTEncDec(nn.Module):
 
     @property
     def last_dec_layer(self):
-        return self.decoder[-3][-1].weight
+        return self.decoder[-2][-1].weight
 
     def encode(self, x):
         return self.encoder(x)
@@ -384,6 +406,7 @@ class VitVQGanVAE(nn.Module):
 
         self.enc_dec = ViTEncDec(
             dim = dim,
+            image_size = image_size,
             channels = channels,
             layers = layers,
             **encdec_kwargs

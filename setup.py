@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
   name = 'parti-pytorch',
   packages = find_packages(exclude=[]),
-  version = '0.0.7',
+  version = '0.0.8',
   license='MIT',
   description = 'Parti - Pathways Autoregressive Text-to-Image Model - Pytorch',
   author = 'Phil Wang',
@@ -24,7 +24,7 @@ setup(
     'torch>=1.6',
     'torchvision',
     'transformers',
-    'vector-quantize-pytorch'
+    'vector-quantize-pytorch>=0.7.3'
   ],
   classifiers=[
     'Development Status :: 4 - Beta',
