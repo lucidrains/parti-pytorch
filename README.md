@@ -196,7 +196,7 @@ loss.backward()
 @article{Chu2021DoWR,
     title   = {Do We Really Need Explicit Position Encodings for Vision Transformers?},
     author  = {Xiangxiang Chu and Bo Zhang and Zhi Tian and Xiaolin Wei and Huaxia Xia},
-    journal {ArXiv},
+    journal = {ArXiv},
     year    = {2021},
     volume  = {abs/2102.10882}
 }
