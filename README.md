@@ -91,13 +91,13 @@ images = parti.generate(texts = [
 
 ## Todo
 
+- [x] add 2d relative positional bias to parti autoregressive transformer
 - [ ] get working vit vqgan-vae trainer code, as discriminator needs to be trained
 - [ ] preencoding of text with designated t5
 - [ ] training code for parti
 - [ ] inference caching
 - [ ] automatic filtering with Coca https://github.com/lucidrains/CoCa-pytorch
 - [ ] bring in the super-resoluting convolutional net mentioned in the paper, with training code
-- [ ] add 2d relative positional bias to parti autoregressive transformer
 
 ## Citations
 
