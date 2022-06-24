@@ -16,6 +16,33 @@ $ pip install parti-pytorch
 
 ## Usage
 
+First you will need to train your Transformer VQ-GAN VAE
+
+```python
+from parti_pytorch import VitVQGanVAE, VQGanVAETrainer
+
+vit_vae = VitVQGanVAE(
+    dim = 512,               # dimensions
+    image_size = 256,        # target image size
+    patch_size = 16,         # size of the patches in the image attending to each other
+    num_layers = 3           # number of layers
+).cuda()
+
+trainer = VQGanVAETrainer(
+    vit_vae,
+    folder = '/path/to/your/images',
+    num_train_steps = 100000,
+    lr = 3e-4,
+    batch_size = 4,
+    grad_accum_every = 8,
+    amp = True
+)
+
+trainer.train()
+```
+
+Then
+
 ```python
 import torch
 from parti_pytorch import Parti, VitVQGanVAE
@@ -25,18 +52,14 @@ from parti_pytorch import Parti, VitVQGanVAE
 
 vit_vae = VitVQGanVAE(
     dim = 512,               # dimensions
-    image_size = 256,        # target image size
-    patch_size = 16,         # patch size in the image that attends to each other
-    num_layers = 4           # number of layers
+    image_size = 128,        # target image size
+    patch_size = 16,         # size of the patches in the image attending to each other
+    num_layers = 3           # number of layers
 ).cuda()
 
-images = torch.randn(4, 3, 256, 256).cuda()
+vit_vae.load_state_dict(torch.load(f'/path/to/vae.pt')) # you will want to load the exponentially moving averaged VAE
 
-loss = vit_vae(images, return_loss = True)
-loss.backward()
-
-# do the above with as many images as possible
-# then you plugin the ViT VqGan VAE into your Parti
+# then you plugin the ViT VqGan VAE into your Parti as so
 
 parti = Parti(
     vae = vit_vae,            # vit vqgan vae
