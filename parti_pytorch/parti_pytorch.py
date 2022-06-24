@@ -402,7 +402,7 @@ class Parti(nn.Module):
 
         if cond_drop_prob > 0:
             keep_mask = prob_mask_like((batch,), 1 - cond_drop_prob, device = device)
-            text_mask &= rearrange(keep_mask, 'b -> b 1')
+            text_mask = rearrange(keep_mask, 'b -> b 1') & text_mask
 
         # attend
 

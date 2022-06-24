@@ -108,6 +108,32 @@ images = parti.generate(texts = [
 # List[PILImages] (256 x 256 RGB)
 ```
 
+Realistically, when scaling up, you'll want to pre-encode your text into tokens and their respective mask
+
+```python
+from parti_pytorch.t5 import t5_encode_text
+
+text_token_embeds, text_mask = t5_encode_text([
+    'a child screaming at finding a worm within a half-eaten apple',
+    'lizard running across the desert on two feet',
+    'waking up to a psychedelic landscape',
+    'seashells sparkling in the shallow waters'
+], name = 't5-large')
+
+# store somewhere, then load with the dataloader
+
+images = torch.randn(4, 3, 256, 256).cuda()
+
+loss = parti(
+    text_token_embeds = text_token_embeds.cuda(),
+    text_mask = text_mask.cuda(),
+    images = images,
+    return_loss = True
+)
+
+loss.backward()
+```
+
 ## Appreciation
 
 - <a href="https://stability.ai/">StabilityAI</a> for the sponsorship, as well as my other sponsors, for affording me the independence to open source artificial intelligence.
