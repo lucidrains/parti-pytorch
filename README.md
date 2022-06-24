@@ -26,7 +26,7 @@ from parti_pytorch import Parti, VitVQGanVAE
 vit_vae = VitVQGanVAE(
     dim = 512,               # dimensions
     image_size = 256,        # target image size
-    patch_size = 16,
+    patch_size = 16,         # patch size in the image that attends to each other
     num_layers = 4           # number of layers
 ).cuda()
 
