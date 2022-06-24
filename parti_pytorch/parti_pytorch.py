@@ -69,6 +69,33 @@ class LayerNorm(nn.Module):
     def forward(self, x):
         return F.layer_norm(x, x.shape[-1:], self.gamma, self.beta)
 
+# 2d relative positional bias
+
+class RelPosBias2d(nn.Module):
+    def __init__(self, size, heads):
+        super().__init__()
+        self.pos_bias = nn.Embedding((2 * size - 1) ** 2, heads)
+
+        arange = torch.arange(size)
+
+        pos = torch.stack(torch.meshgrid(arange, arange, indexing = 'ij'), dim = -1)
+        pos = rearrange(pos, '... c -> (...) c')
+        rel_pos = rearrange(pos, 'i c -> i 1 c') - rearrange(pos, 'j c -> 1 j c')
+
+        rel_pos = rel_pos + size - 1
+        h_rel, w_rel = rel_pos.unbind(dim = -1)
+        pos_indices = h_rel * (2 * size - 1) + w_rel
+        self.register_buffer('pos_indices', pos_indices)
+
+    def forward(self, qk):
+        i, j = qk.shape[-2:]
+
+        bias = self.pos_bias(self.pos_indices[:i, :(j - 1)])
+        bias = rearrange(bias, 'i j h -> h i j')
+
+        bias = F.pad(bias, (j - bias.shape[-1], 0), value = 0.) # account for null key / value for classifier free guidance
+        return bias
+
 # feedforward
 
 def FeedForward(dim, mult = 4, dropout = 0.):
@@ -93,7 +120,9 @@ class Attention(nn.Module):
         heads = 8,
         causal = False,
         dropout = 0.,
-        norm_context = False
+        norm_context = False,
+        rel_pos_bias = False,
+        encoded_fmap_size = None
     ):
         super().__init__()
         self.causal = causal
@@ -128,6 +157,14 @@ class Attention(nn.Module):
             LayerNorm(dim)
         )
 
+        # positional bias
+
+        self.rel_pos_bias = None
+
+        if rel_pos_bias:
+            assert exists(encoded_fmap_size)
+            self.rel_pos_bias = RelPosBias2d(encoded_fmap_size, heads)
+
     def forward(
         self,
         x,
@@ -149,6 +186,10 @@ class Attention(nn.Module):
         kv = torch.cat((null_kv, kv), dim = 1)
 
         sim = einsum('b h i d, b j d -> b h i j', q, kv)
+
+        if exists(self.rel_pos_bias):
+            pos_bias = self.rel_pos_bias(sim)
+            sim = sim + pos_bias
 
         mask_value = -torch.finfo(sim.dtype).max
 
@@ -220,7 +261,7 @@ class Parti(nn.Module):
 
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
-                Attention(dim, causal = True, dim_head = dim_head, heads = heads, dropout = dropout),
+                Attention(dim, causal = True, encoded_fmap_size = self.image_encoded_dim, rel_pos_bias = True, dim_head = dim_head, heads = heads, dropout = dropout),
                 Attention(dim, context_dim = text_embed_dim, dim_head = dim_head, heads = heads, dropout = dropout),
                 FeedForward(dim, mult = ff_mult, dropout = dropout)
             ]))
