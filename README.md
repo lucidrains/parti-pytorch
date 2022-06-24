@@ -18,8 +18,7 @@ $ pip install parti-pytorch
 
 ```python
 import torch
-from parti_pytorch import Parti
-from parti_pytorch.vit_vqgan import VitVQGanVAE
+from parti_pytorch import Parti, VitVQGanVAE
 
 # first instantiate your ViT VQGan VAE
 # a VQGan VAE made of transformers
