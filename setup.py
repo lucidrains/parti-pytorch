@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-exec(open('imagen_pytorch/version.py').read())
+exec(open('parti_pytorch/version.py').read())
 
 setup(
   name = 'parti-pytorch',

@@ -24,7 +24,7 @@ First you will need to train your Transformer VQ-GAN VAE
 from parti_pytorch import VitVQGanVAE, VQGanVAETrainer
 
 vit_vae = VitVQGanVAE(
-    dim = 512,               # dimensions
+    dim = 256,               # dimensions
     image_size = 256,        # target image size
     patch_size = 16,         # size of the patches in the image attending to each other
     num_layers = 3           # number of layers
@@ -53,8 +53,8 @@ from parti_pytorch import Parti, VitVQGanVAE
 # a VQGan VAE made of transformers
 
 vit_vae = VitVQGanVAE(
-    dim = 512,               # dimensions
-    image_size = 128,        # target image size
+    dim = 256,               # dimensions
+    image_size = 256,        # target image size
     patch_size = 16,         # size of the patches in the image attending to each other
     num_layers = 3           # number of layers
 ).cuda()
