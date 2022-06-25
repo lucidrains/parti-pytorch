@@ -141,6 +141,40 @@ class ChanLayerNorm(nn.Module):
         mean = torch.mean(x, dim = 1, keepdim = True)
         return (x - mean) * (var + self.eps).rsqrt() * self.gamma
 
+class Block(nn.Module):
+    def __init__(
+        self,
+        dim,
+        dim_out,
+        groups = 8
+    ):
+        super().__init__()
+        self.groupnorm = nn.GroupNorm(groups, dim)
+        self.activation = leaky_relu()
+        self.project = nn.Conv2d(dim, dim_out, 3, padding = 1)
+
+    def forward(self, x, scale_shift = None):
+        x = self.groupnorm(x)
+        x = self.activation(x)
+        return self.project(x)
+
+class ResnetBlock(nn.Module):
+    def __init__(
+        self,
+        dim,
+        dim_out = None,
+        *,
+        groups = 8
+    ):
+        super().__init__()
+        dim_out = default(dim_out, dim)
+        self.block = Block(dim, dim_out, groups = groups)
+        self.res_conv = nn.Conv2d(dim, dim_out, 1) if dim != dim_out else nn.Identity()
+
+    def forward(self, x):
+        h = self.block(x)
+        return h + self.res_conv(x)
+
 # discriminator
 
 class Discriminator(nn.Module):
@@ -148,19 +182,23 @@ class Discriminator(nn.Module):
         self,
         dims,
         channels = 3,
-        groups = 16,
+        groups = 8,
         init_kernel_size = 5
     ):
         super().__init__()
         dim_pairs = zip(dims[:-1], dims[1:])
 
-        self.layers = MList([nn.Sequential(nn.Conv2d(channels, dims[0], init_kernel_size, padding = init_kernel_size // 2), leaky_relu())])
+        self.layers = MList([
+            nn.Sequential(nn.Conv2d(channels, dims[0], init_kernel_size, padding = init_kernel_size // 2),
+            leaky_relu())
+        ])
 
         for dim_in, dim_out in dim_pairs:
             self.layers.append(nn.Sequential(
                 nn.Conv2d(dim_in, dim_out, 4, stride = 2, padding = 1),
+                leaky_relu(),
                 nn.GroupNorm(groups, dim_out),
-                leaky_relu()
+                ResnetBlock(dim_out, dim_out),
             ))
 
         dim = dims[-1]
