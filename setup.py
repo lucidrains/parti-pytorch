@@ -1,9 +1,10 @@
 from setuptools import setup, find_packages
+exec(open('imagen_pytorch/version.py').read())
 
 setup(
   name = 'parti-pytorch',
   packages = find_packages(exclude=[]),
-  version = '0.0.11',
+  version = __version__,
   license='MIT',
   description = 'Parti - Pathways Autoregressive Text-to-Image Model - Pytorch',
   author = 'Phil Wang',
