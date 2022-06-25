@@ -141,6 +141,33 @@ class ChanLayerNorm(nn.Module):
         mean = torch.mean(x, dim = 1, keepdim = True)
         return (x - mean) * (var + self.eps).rsqrt() * self.gamma
 
+class CrossEmbedLayer(nn.Module):
+    def __init__(
+        self,
+        dim_in,
+        kernel_sizes,
+        dim_out = None,
+        stride = 2
+    ):
+        super().__init__()
+        assert all([*map(lambda t: (t % 2) == (stride % 2), kernel_sizes)])
+        dim_out = default(dim_out, dim_in)
+
+        kernel_sizes = sorted(kernel_sizes)
+        num_scales = len(kernel_sizes)
+
+        # calculate the dimension at each scale
+        dim_scales = [int(dim_out / (2 ** i)) for i in range(1, num_scales)]
+        dim_scales = [*dim_scales, dim_out - sum(dim_scales)]
+
+        self.convs = nn.ModuleList([])
+        for kernel, dim_scale in zip(kernel_sizes, dim_scales):
+            self.convs.append(nn.Conv2d(dim_in, dim_scale, kernel, stride = stride, padding = (kernel - stride) // 2))
+
+    def forward(self, x):
+        fmaps = tuple(map(lambda conv: conv(x), self.convs))
+        return torch.cat(fmaps, dim = 1)
+
 class Block(nn.Module):
     def __init__(
         self,
@@ -183,15 +210,17 @@ class Discriminator(nn.Module):
         dims,
         channels = 3,
         groups = 8,
-        init_kernel_size = 5
+        init_kernel_size = 5,
+        cross_embed_kernel_sizes = (3, 7, 15)
     ):
         super().__init__()
+        init_dim, *_, final_dim = dims
         dim_pairs = zip(dims[:-1], dims[1:])
 
-        self.layers = MList([
-            nn.Sequential(nn.Conv2d(channels, dims[0], init_kernel_size, padding = init_kernel_size // 2),
-            leaky_relu())
-        ])
+        self.layers = MList([nn.Sequential(
+            CrossEmbedLayer(channels, cross_embed_kernel_sizes, init_dim, stride = 1),
+            leaky_relu()
+        )])
 
         for dim_in, dim_out in dim_pairs:
             self.layers.append(nn.Sequential(
@@ -201,11 +230,10 @@ class Discriminator(nn.Module):
                 ResnetBlock(dim_out, dim_out),
             ))
 
-        dim = dims[-1]
         self.to_logits = nn.Sequential( # return 5 x 5, for PatchGAN-esque training
-            nn.Conv2d(dim, dim, 1),
+            nn.Conv2d(final_dim, final_dim, 1),
             leaky_relu(),
-            nn.Conv2d(dim, 1, 4)
+            nn.Conv2d(final_dim, 1, 4)
         )
 
     def forward(self, x):

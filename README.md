@@ -212,3 +212,11 @@ loss.backward()
     volume  = {abs/2109.08668}
 }
 ```
+
+```bibtex
+@inproceedings{Wang2021CrossFormerAV,
+    title   = {CrossFormer: A Versatile Vision Transformer Hinging on Cross-scale Attention},
+    author  = {Wenxiao Wang and Lulian Yao and Long Chen and Binbin Lin and Deng Cai and Xiaofei He and Wei Liu},
+    year    = {2021}
+}
+```
