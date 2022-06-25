@@ -151,6 +151,7 @@ loss.backward()
 - [ ] automatic filtering with Coca https://github.com/lucidrains/CoCa-pytorch
 - [ ] bring in the super-resoluting convolutional net mentioned in the paper, with training code
 - [ ] initialize 2d rel pos bias in conv-like pattern
+- [ ] use crossformer embed layer for initial convolution in discriminator
 
 ## Citations
 
