@@ -124,6 +124,33 @@ def grad_layer_wrt_loss(loss, layer):
         retain_graph = True
     )[0].detach()
 
+# fourier
+
+class SinusoidalPosEmb(nn.Module):
+    def __init__(
+        self,
+        dim,
+        height_or_width,
+        theta = 10000
+    ):
+        super().__init__()
+        self.dim = dim
+        self.theta = theta
+
+        hw_range = torch.arange(height_or_width)
+        coors = torch.stack(torch.meshgrid(hw_range, hw_range, indexing = 'ij'), dim = -1)
+        coors = rearrange(coors, 'h w c -> h w c')
+        self.register_buffer('coors', coors, persistent = False)
+
+    def forward(self, x):
+        half_dim = self.dim // 2
+        emb = math.log(self.theta) / (half_dim - 1)
+        emb = torch.exp(torch.arange(half_dim, device = x.device) * -emb)
+        emb = rearrange(self.coors, 'h w c -> h w c 1') * rearrange(emb, 'j -> 1 1 1 j')
+        fourier = torch.cat((emb.sin(), emb.cos()), dim = -1)
+        fourier = repeat(fourier, 'h w c d -> b (c d) h w', b = x.shape[0])
+        return torch.cat((x, fourier), dim = 1)
+
 # vqgan vae
 
 class ChanLayerNorm(nn.Module):
@@ -426,7 +453,8 @@ class ViTEncDec(nn.Module):
                 fmap_size = fmap_size
             ),
             nn.Sequential(
-                nn.Conv2d(dim, dim * 4, 3, bias = False, padding = 1),
+                SinusoidalPosEmb(dim // 2, height_or_width = fmap_size),
+                nn.Conv2d(2 * dim, dim * 4, 3, bias = False, padding = 1),
                 nn.Tanh(),
                 nn.Conv2d(dim * 4, input_dim, 1, bias = False),
             ),
