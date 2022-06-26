@@ -4,7 +4,7 @@
 
 Implementation of <a href="https://parti.research.google/">Parti</a>, Google's pure attention-based text-to-image neural network, in Pytorch.
 
-This repository also contains working training code for <a href="https://ai.googleblog.com/2022/05/vector-quantized-image-modeling-with.html">ViT VQGan VAE</a>, the only code out there that is available at the moment. It also contains some additional modifications for faster training from vision transformers literature.
+This repository also contains working training code for <a href="https://ai.googleblog.com/2022/05/vector-quantized-image-modeling-with.html">ViT VQGan VAE</a>. It also contains some additional modifications for faster training from vision transformers literature.
 
 <a href="https://www.youtube.com/watch?v=qS-iYnp00uc">Yannic Kilcher</a>
 
