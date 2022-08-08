@@ -25,7 +25,7 @@ setup(
     'torch>=1.6',
     'torchvision',
     'transformers',
-    'vector-quantize-pytorch>=0.7.3'
+    'vector-quantize-pytorch>=0.9.2'
   ],
   classifiers=[
     'Development Status :: 4 - Beta',
