@@ -203,6 +203,8 @@ class VQGanVAETrainer(nn.Module):
         # update discriminator
 
         if exists(self.vae.discr):
+            self.discr_optim.zero_grad()
+
             discr_loss = 0
             for _ in range(self.grad_accum_every):
                 img = next(self.dl)
@@ -217,7 +219,6 @@ class VQGanVAETrainer(nn.Module):
 
             self.discr_scaler.step(self.discr_optim)
             self.discr_scaler.update()
-            self.discr_optim.zero_grad()
 
             # log
 
