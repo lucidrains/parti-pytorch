@@ -226,7 +226,8 @@ class Parti(nn.Module):
         t5_name = DEFAULT_T5_NAME,
         text_embed_dim = None,
         cond_drop_prob = 0.25,
-        max_text_len = 128
+        max_text_len = 128,
+        ignore_index = -1
     ):
         super().__init__()
 
@@ -277,6 +278,10 @@ class Parti(nn.Module):
 
         if exists(vae):
             self.to(next(vae.parameters()).device)
+
+        # loss related
+
+        self.ignore_index = ignore_index
 
     @torch.no_grad()
     @eval_decorator
@@ -421,7 +426,7 @@ class Parti(nn.Module):
         loss = F.cross_entropy(
             rearrange(logits, 'b n c -> b c n'),
             labels,
-            ignore_index = 0
+            ignore_index = self.ignore_index
         )
 
         return loss
