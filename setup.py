@@ -19,13 +19,13 @@ setup(
     'text-to-image'
   ],
   install_requires=[
-    'einops>=0.4',
+    'einops>=0.7',
     'einops-exts',
     'ema-pytorch',
     'torch>=1.6',
     'torchvision',
     'transformers',
-    'vector-quantize-pytorch>=0.9.2'
+    'vector-quantize-pytorch>=1.9.4'
   ],
   classifiers=[
     'Development Status :: 4 - Beta',

@@ -3,7 +3,7 @@ import math
 from math import sqrt
 from functools import partial, wraps
 
-from vector_quantize_pytorch import VectorQuantize as VQ
+from vector_quantize_pytorch import VectorQuantize as VQ, LFQ
 
 import torch
 from torch import nn, einsum
@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch.autograd import grad as torch_grad
 import torchvision
 
-from einops import rearrange, reduce, repeat
+from einops import rearrange, reduce, repeat, pack, unpack
 from einops_exts import rearrange_many
 from einops.layers.torch import Rearrange
 
@@ -487,11 +487,18 @@ class VitVQGanVAE(nn.Module):
         l2_recon_loss = False,
         use_hinge_loss = True,
         vgg = None,
-        vq_codebook_dim = 64,
-        vq_codebook_size = 512,
-        vq_decay = 0.9,
-        vq_commitment_weight = 1.,
-        vq_kmeans_init = True,
+        lookup_free_quantization = True,
+        codebook_size = 65536,
+        vq_kwargs: dict = dict(
+            codebook_dim = 64,
+            decay = 0.9,
+            commitment_weight = 1.,
+            kmeans_init = True
+        ),
+        lfq_kwargs: dict = dict(
+            entropy_loss_weight = 0.1,
+            diversity_gamma = 2.
+        ),
         use_vgg_and_gan = True,
         discr_layers = 4,
         **kwargs
@@ -502,7 +509,7 @@ class VitVQGanVAE(nn.Module):
 
         self.image_size = image_size
         self.channels = channels
-        self.codebook_size = vq_codebook_size
+        self.codebook_size = codebook_size
 
         self.enc_dec = ViTEncDec(
             dim = dim,
@@ -512,17 +519,25 @@ class VitVQGanVAE(nn.Module):
             **encdec_kwargs
         )
 
-        self.vq = VQ(
-            dim = self.enc_dec.encoded_dim,
-            codebook_dim = vq_codebook_dim,
-            codebook_size = vq_codebook_size,
-            decay = vq_decay,
-            commitment_weight = vq_commitment_weight,
-            kmeans_init = vq_kmeans_init,
-            accept_image_fmap = True,
-            use_cosine_sim = True,
-            **vq_kwargs
-        )
+        # offer look up free quantization
+        # https://arxiv.org/abs/2310.05737
+
+        self.lookup_free_quantization = lookup_free_quantization
+
+        if lookup_free_quantization:
+            self.quantizer = LFQ(
+                dim = self.enc_dec.encoded_dim,
+                codebook_size = codebook_size,
+                **lfq_kwargs
+            )
+        else:
+            self.quantizer = VQ(
+                dim = self.enc_dec.encoded_dim,
+                codebook_size = codebook_size,
+                accept_image_fmap = True,
+                use_cosine_sim = True,
+                **vq_kwargs
+            )
 
         # reconstruction loss
 
@@ -582,24 +597,26 @@ class VitVQGanVAE(nn.Module):
     def load_state_dict(self, *args, **kwargs):
         return super().load_state_dict(*args, **kwargs)
 
-    @property
-    def codebook(self):
-        return self.vq.codebook
-
     def get_fmap_from_codebook(self, indices):
-        codes = self.codebook[indices]
-        fmap = self.vq.project_out(codes)
+        if self.lookup_free_quantization:
+            indices, ps = pack([indices], 'b *')
+            fmap = self.quantizer.indices_to_codes(indices)
+            fmap, = unpack(fmap, ps, 'b * c')
+        else:
+            codes = self.quantizer.codebook[indices]
+            fmap = self.vq.project_out(codes)
+
         return rearrange(fmap, 'b h w c -> b c h w')
 
     def encode(self, fmap, return_indices_and_loss = True):
         fmap = self.enc_dec.encode(fmap)
 
-        fmap, indices, commit_loss = self.vq(fmap)
+        fmap, indices, quantizer_aux_loss = self.quantizer(fmap)
 
         if not return_indices_and_loss:
             return fmap
 
-        return fmap, indices, commit_loss
+        return fmap, indices, quantizer_aux_loss
 
     def decode(self, fmap):
         return self.enc_dec.decode(fmap)
