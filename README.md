@@ -2,7 +2,7 @@
 
 ## Parti - Pytorch
 
-Implementation of <a href="https://parti.research.google/">Parti</a>, Google's pure attention-based text-to-image neural network, in Pytorch.
+Implementation of <a href="https://parti.research.google/">Parti</a>, Google's pure attention-based text-to-image neural network, in Pytorch. <a src="https://sites.research.google/parti/">Project Page</a>
 
 This repository also contains working training code for <a href="https://ai.googleblog.com/2022/05/vector-quantized-image-modeling-with.html">ViT VQGan VAE</a>. It also contains some additional modifications for faster training from vision transformers literature.
 
