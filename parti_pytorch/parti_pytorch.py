@@ -153,8 +153,7 @@ class Attention(nn.Module):
 
         self.to_out = nn.Sequential(
             Rearrange('b h n d -> b n (h d)'),
-            nn.Linear(inner_dim, dim, bias = False),
-            LayerNorm(dim)
+            nn.Linear(inner_dim, dim, bias = False)
         )
 
         # positional bias
